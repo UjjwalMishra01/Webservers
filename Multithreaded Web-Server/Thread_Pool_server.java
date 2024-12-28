@@ -1,6 +1,6 @@
 package ThreadPool;
 
-import java.io.PrintWriter;
+import java.io.*;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.ExecutorService;
@@ -13,21 +13,83 @@ public class Server {
         this.threadPool = Executors.newFixedThreadPool(poolSize);
     }
 
+    // Handle individual client connection
     public void handleClient(Socket clientSocket) {
-        try (PrintWriter toSocket = new PrintWriter(clientSocket.getOutputStream(), true)) {
-            toSocket.println("Hello from server " + clientSocket.getInetAddress());
-        } catch (Exception e) {
+        try (BufferedReader fromClient = new BufferedReader(new InputStreamReader(clientSocket.getInputStream()));
+             PrintWriter toClient = new PrintWriter(clientSocket.getOutputStream(), true)) {
+
+            // Read HTTP request header
+            String requestLine = fromClient.readLine();
+            System.out.println("Request received: " + requestLine);
+
+            if (requestLine.startsWith("GET")) {
+                handleFileSending(toClient);
+            } else if (requestLine.startsWith("POST")) {
+                handleFileReceiving(fromClient);
+            } else {
+                toClient.println("HTTP/1.1 400 Bad Request\r\n");
+                System.out.println("Unsupported request.");
+            }
+        } catch (IOException e) {
             System.err.println("Error handling client: " + e.getMessage());
             e.printStackTrace();
         } finally {
             try {
                 clientSocket.close();
-            } catch (Exception e) {
+            } catch (IOException e) {
                 System.err.println("Error closing client socket: " + e.getMessage());
             }
         }
     }
 
+    // Handle sending files to the client
+    private void handleFileSending(PrintWriter toClient) {
+        try {
+            File file = new File("server_files/sample.txt"); // Replace with your file path
+            if (!file.exists()) {
+                toClient.println("HTTP/1.1 404 Not Found\r\n");
+                System.out.println("File not found: " + file.getName());
+                return;
+            }
+
+            toClient.println("HTTP/1.1 200 OK\r\n");
+            toClient.println("Content-Type: text/plain\r\n");
+            toClient.println("Content-Length: " + file.length() + "\r\n");
+            toClient.println();
+
+            BufferedReader fileReader = new BufferedReader(new FileReader(file));
+            String line;
+            while ((line = fileReader.readLine()) != null) {
+                toClient.println(line);
+            }
+            fileReader.close();
+            System.out.println("File sent successfully: " + file.getName());
+        } catch (IOException e) {
+            System.err.println("Error sending file: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    // Handle receiving files from the client
+    private void handleFileReceiving(BufferedReader fromClient) {
+        try {
+            String fileName = "received_file.txt"; // Name of the file to save
+            File file = new File("server_files/" + fileName);
+            try (BufferedWriter fileWriter = new BufferedWriter(new FileWriter(file))) {
+                String line;
+                while ((line = fromClient.readLine()) != null && !line.isEmpty()) {
+                    fileWriter.write(line);
+                    fileWriter.newLine();
+                }
+                System.out.println("File received successfully: " + fileName);
+            }
+        } catch (IOException e) {
+            System.err.println("Error receiving file: " + e.getMessage());
+            e.printStackTrace();
+        }
+    }
+
+    // Main method to start the server
     public static void main(String[] args) {
         int port = 8080;
         int poolSize = 100;
@@ -46,11 +108,11 @@ public class Server {
                 try {
                     Socket clientSocket = serverSocket.accept();
                     server.threadPool.execute(() -> server.handleClient(clientSocket));
-                } catch (Exception e) {
+                } catch (IOException e) {
                     System.err.println("Error accepting connection: " + e.getMessage());
                 }
             }
-        } catch (Exception e) {
+        } catch (IOException e) {
             System.err.println("Server encountered an error: " + e.getMessage());
             e.printStackTrace();
         }
