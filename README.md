@@ -1,7 +1,7 @@
 # Web Servers Repository
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/UjjwalMishra01/Webservers/main/assets/webserverbanner.png" alt="Web Servers Banner" width="800">
+  <img src="https://raw.githubusercontent.com/UjjwalMishra01/Webservers/main/assets/webserver-banner.png" alt="Web Servers Banner" width="800">
 </p>
 
 Welcome to the **Web Servers Repository**! 🚀 This repository contains implementations of both **Single-Threaded** and **Multithreaded** web servers in Java. Each server demonstrates key concepts in socket programming, concurrency, and HTTP communication, making it a great resource for learning or showcasing your skills.
